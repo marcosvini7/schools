@@ -1,18 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import App from "../App";
 import Login from "../pages/Login";
 import About from "../pages/About";
 import Schools from "../pages/Shools";
 import FormSchools from "../pages/Shools/FormSchools";
+import PrivateRoute from "./PrivateRoute";
 
 export default function Router(){
-  function isAuthenticated(){
-    if(localStorage.getItem('token') !== null){
-      return true
-    } else {
-      return false
-    }
-  }
 
   return (
     <BrowserRouter>
@@ -20,7 +14,7 @@ export default function Router(){
         <Route path="/" element={<App />}>
           <Route path="login" element={<Login />} />
           <Route path="sobre" element={<About />} />
-          <Route path="escolas" element={ isAuthenticated() ? <Schools/> : <Navigate to="/login" /> }>
+          <Route path="escolas" element={ <PrivateRoute> <Schools/> </PrivateRoute> }>
             <Route path="cadastro" element={<FormSchools />} />
           </Route>
         </Route>

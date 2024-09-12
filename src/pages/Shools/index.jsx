@@ -25,11 +25,22 @@ export default function Schools(){
       headers: {
         "Authorization": "Bearer " + localStorage.getItem('token')
       }})
-      .then(res => res.json())
+      .then(res => {
+        if(res.ok){
+          return res.json()
+        }
+        if(res.status === 401){ // Desloga o usuário caso o token seja inválido
+          hp.logout(dispatch, navigate)
+        }
+      })
       .then(data => {
         dispatch( actions.setCities(data) )
       })
-  }, [dispatch])
+      .catch(err => {
+        console.log(err)
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Solicita as escolas para a api usando a lógica de parametros de query
   useEffect(() => {
@@ -42,15 +53,25 @@ export default function Schools(){
         "Authorization": "Bearer " + localStorage.getItem('token')
       }
     })
-    .then(res => res.json())
+    .then(res => {
+      if(res.ok){
+        return res.json()
+      }
+      if(res.status === 401){ // Desloga o usuário caso o token seja inválido
+        hp.logout(dispatch, navigate)
+      }
+    })
     .then(res => {
       dispatch( actions.setSchools(res.data) )
+    })
+    .catch(err => {
+      console.log(err)
     })
     .finally(() => {
       setLoading(false)
     })
-  }, [search, dispatch])
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search])
   
   useEffect(() => {
     if(initialRender.current){ // Não executa na primeira redenrização
@@ -83,8 +104,8 @@ export default function Schools(){
   }
 
   return (
-    <div>
-      { location.pathname === '/escolas' ? <>
+    <div> {/* Ou renderiza o filtro e escolas ou o formulário de cadastro */}
+      { location.pathname === '/escolas' ? <> 
         <div>
           <div className="row">
             <div className="col-12 col-md-9">
@@ -153,7 +174,7 @@ export default function Schools(){
         }
 
       </>
-      :
+      : // Formulário de cadastro
         <Outlet/>
       }
     </div>

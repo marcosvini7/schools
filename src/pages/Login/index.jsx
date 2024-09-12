@@ -9,6 +9,7 @@ export default function Login(){
   const [form, setForm] = useState({})
   const [errorMessage, setErrorMessage] = useState('')
   const [btnDisabled, setBtnDisabled] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if(form.email && form.senha){
@@ -27,6 +28,7 @@ export default function Login(){
 
   function handleSubmitForm(){
     setBtnDisabled(true)
+    setIsLoading(true)
     setErrorMessage('')
     document.body.style.cursor = 'wait'
 
@@ -48,11 +50,13 @@ export default function Login(){
       
       navigate('/escolas')  
     })
-    .catch(() => {
+    .catch((err) => {
+      console.log(err)
       setErrorMessage('E-mail ou senha incorreto(s)')
     })
     .finally(() => {
       setBtnDisabled(false)
+      setIsLoading(false)
       document.body.style.cursor = 'default'
     })
   }
@@ -76,11 +80,12 @@ export default function Login(){
           </div>
           
           <button className="btn btn-primary" disabled={btnDisabled} onClick={handleSubmitForm} >
-          <i className="bi bi-box-arrow-right"></i> Acessar
+            <i className="bi bi-box-arrow-right"></i> Acessar
           </button>
+          { isLoading && <img src="/images/1488.gif" className="btn-gif" alt="" /> }
 
           { errorMessage && 
-            <div className="text-center text-danger">{ errorMessage }</div>
+            <div className="text-center text-danger mt-2">{ errorMessage }</div>
           }
           
         </div>
