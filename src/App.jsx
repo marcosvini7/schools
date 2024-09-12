@@ -15,7 +15,7 @@ function App() {
       token: localStorage.getItem('token')
     }
     dispatch( actions.setUser(user) )
-  }, [dispatch])
+  })
 
   // Ajuste do título da aplicação de acordo com a rota acessada
   useEffect(() => { 
@@ -34,14 +34,8 @@ function App() {
   return (
     <div>
       <Navbar/>
-      <div className='container-fluid mt-2'>
-        { location.pathname === '/' ? 
-          <div>
-            <h1>App</h1>
-          </div>
-        : 
-          <Outlet />
-        }
+      <div className='container-fluid mt-3 mb-3'>
+        <Outlet />        
       </div>
     </div>
   );

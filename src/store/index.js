@@ -4,7 +4,9 @@ const initialState = {
   user: {
     name: '',
     token: ''
-  }
+  },
+  schools: [],
+  cities: []
 }
 
 const globalSlice = createSlice({
@@ -13,6 +15,12 @@ const globalSlice = createSlice({
   reducers: {
     setUser: (state, action) => {
       state.user = action.payload
+    },
+    setSchools: (state, action) => {
+      state.schools = action.payload
+    },
+    setCities: (state, action) => {
+      state.cities = action.payload
     }
   }
 })

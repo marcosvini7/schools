@@ -1,15 +1,17 @@
 import { useDispatch, useSelector } from "react-redux"
 import './styles.css'
-import { NavLink, Link } from "react-router-dom"
+import { NavLink, Link, useNavigate } from "react-router-dom"
 import { actions } from "../../store"
 
 export default function Navbar(){
   const state = useSelector(state => state.global)
   const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   function logout(){
     localStorage.clear()
     dispatch( actions.setUser({}) )
+    navigate('/login', { replace: true })
   }
 
   return (
@@ -34,14 +36,15 @@ export default function Navbar(){
             <li className="nav-item">
               <NavLink className="nav-link" activeclassname="active" to="/sobre">Sobre</NavLink>
             </li>
+        
             { state.user.name ? // O nome do usuário é exibido quando está autenticado
               <li className="nav-item dropdown">
                 <Link className="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   <i className="bi bi-person-circle"></i>  { state.user.name }
                 </Link>
                 <ul className="dropdown-menu">
-                  <li onClick={logout} >
-                    <Link className="dropdown-item" to="/login"> 
+                  <li onClick={logout}>
+                    <Link className="dropdown-item"> 
                       <i className="bi bi-box-arrow-left"></i> Sair
                     </Link>
                   </li>

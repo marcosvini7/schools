@@ -1,6 +1,9 @@
-.form-control:focus {
+.form-control:focus, .form-select:focus {
   box-shadow: 0px 0px 7px mediumseagreen;
   border-color: mediumseagreen;
+}
+.pointer {
+  cursor: pointer;
 }
 
 

@@ -30,25 +30,23 @@ export default function Login(){
     setErrorMessage('')
     document.body.style.cursor = 'wait'
 
-    const formData = new FormData()
-    formData.append('email', form.email)
-    formData.append('senha', form.senha)
-
-    fetch('https://apiteste.mobieduca.me/api/login/run', {
+    fetch(process.env.REACT_APP_API_URL + 'login/run', {
+      headers: {
+        'Content-Type': 'application/json'
+      },
       method: 'POST',
-      body: formData
+      body: JSON.stringify(form)
     })
     .then(res => res.json())
     .then(data => {
-      if(data){
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('name', data.nome)
-        dispatch( actions.setUser({
-          name: data.nome,
-          token: data.token
-        }))
-        navigate('/escolas')
-      }
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('name', data.nome) 
+      dispatch( actions.setUser({
+        name: data.nome,
+        token: data.token
+      }))
+      
+      navigate('/escolas')  
     })
     .catch(() => {
       setErrorMessage('E-mail ou senha incorreto(s)')
@@ -77,7 +75,9 @@ export default function Login(){
               onChange={handleChangeInput} />
           </div>
           
-          <button className="btn btn-primary" disabled={btnDisabled} onClick={handleSubmitForm} >Acessar</button>
+          <button className="btn btn-primary" disabled={btnDisabled} onClick={handleSubmitForm} >
+          <i className="bi bi-box-arrow-right"></i> Acessar
+          </button>
 
           { errorMessage && 
             <div className="text-center text-danger">{ errorMessage }</div>

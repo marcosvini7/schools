@@ -1,0 +1,21 @@
+.bi-plus-lg {
+  font-size: 16px;
+}
+
+.card-header {
+  font-size: 16px;
+  color:firebrick
+}
+
+.row .card {
+  transition: transform 0.3s ease
+}
+
+.row .card:hover {
+  transform: scale(1.04)
+}
+
+.gif-loading {
+  margin-top: 150px;
+  width: 80px;
+}
