@@ -6,7 +6,8 @@ const initialState = {
     token: ''
   },
   schools: [],
-  cities: []
+  cities: [],
+  dataLoading: true
 }
 
 const globalSlice = createSlice({
@@ -21,6 +22,9 @@ const globalSlice = createSlice({
     },
     setCities: (state, action) => {
       state.cities = action.payload
+    },
+    setDataLoading: (state, action) => {
+      state.dataLoading = action.payload
     }
   }
 })

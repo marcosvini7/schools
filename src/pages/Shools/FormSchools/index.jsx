@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { hp } from "../../../util/helpers"
+import { actions } from "../../../store"
+import Loading from "../../../components/Loading"
 
 export default function SchoolsNew(){
   const initialForm = {
@@ -19,6 +21,41 @@ export default function SchoolsNew(){
   const [isLoading, setIsLoading] = useState(false)
   const state = useSelector(state => state.global)
   const dispatch = useDispatch()
+  const { id } = useParams()
+
+  useEffect(() => {
+    if(id){ // Se for a rota de edição
+      dispatch( actions.setDataLoading(true) )
+      fetch(process.env.REACT_APP_API_URL + 'escolas/' + id, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem('token')
+        }})
+        .then(res => {
+          if(res.ok){
+            return res.json()
+          }
+          if(res.status === 401){ // Desloga o usuário caso o token seja inválido
+            hp.logout(dispatch, navigate)
+          }
+        })
+        .then(data => {
+          setForm({
+            nome: data.nome,
+            diretor: data.diretor,
+            cidade_id: data.cidade_id,
+            localizacao: data.localizacao,
+            turnos: data.turnos.map(turno => turno.turno_sigla)
+          })
+        })
+        .catch(err => {
+          console.log(err)
+        })
+        .finally(() => {
+          dispatch( actions.setDataLoading(false) )
+        })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if(form.nome && form.cidade_id && form.localizacao && form.turnos?.length){
@@ -59,31 +96,40 @@ export default function SchoolsNew(){
     setErrorMessage('')
     setSuccessMessage('')
     document.body.style.cursor = 'wait'
- 
-    fetch(process.env.REACT_APP_API_URL + 'escolas', {
+
+    let url = 'escolas'
+    let msgSuccess = 'Escola cadastrada com sucesso!'
+    let msgError = 'Erro ao cadastrar escola'
+    if(id){
+      url = 'escolas/' + id 
+      msgSuccess = 'Escola atualizada com sucesso!'
+      msgError = 'Erro ao atualizar escola'
+    }
+
+    fetch(process.env.REACT_APP_API_URL + url, {
       headers: {
         "Authorization": "Bearer " + localStorage.getItem('token'),
         'Content-Type': 'application/json'
       },
-      method: 'POST',
+      method: id ? 'PATCH' : 'POST', // Se tiver o id, significa que o objetivo é uma edição, caso contrário, cadastro
       body: JSON.stringify(form)
     })
     .then(res => {
-      if (!res.ok) {
-        setErrorMessage('Erro ao criar a escola')
+      if (res.ok){
+        if(!id){
+          setForm(initialForm)
+        }     
+        setSuccessMessage(msgSuccess)
       }
-      if (res.status === 401){ // Desloga o usuário caso o token seja inválido
+      if (res.status === 401) {  // Desloga o usuário caso o token seja inválido
         hp.logout(dispatch, navigate)
       }
-      return res.json()
-    })
-    .then(() => {
-      setForm(initialForm)
-      setSuccessMessage('Escola criada com sucesso')
+      else if(!res.ok) {        
+        setErrorMessage(msgError)
+      } 
     })
     .catch((err) => {
       console.log(err)
-      setErrorMessage('Erro ao criar a escola')
     })
     .finally(() => {
       setBtnDisabled(false)
@@ -93,13 +139,14 @@ export default function SchoolsNew(){
   }
 
   return (
-    <div>
+    <div>     
       <h5 className="text-center">
         <i className="bi bi-arrow-left pointer text-info mx-2" 
           onClick={() => navigate('/escolas', {state: 'update'})}></i>
-        Cadastro de escola
+        {id ? 'Edição de escola nº ' + id : 'Cadastro de escola'}
       </h5>
 
+      <Loading>
       <div className="mb-3"> 
         <label htmlFor="input-name" className="form-label">Nome da escola</label>
         <input type="text" name="nome" className="form-control" id="input-name" 
@@ -162,6 +209,7 @@ export default function SchoolsNew(){
       { successMessage &&
         <div className="text-success text-center text-md-start mt-2">{ successMessage }</div>
       }
+      </Loading>
     </div>
   )
 }
