@@ -73,6 +73,45 @@ export default function Schools(){
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, forceEffect])
+
+  // É executado quando ocorre uma modificação em "state.modalDataAction", isso é feito somente na página modal
+  useEffect(() => {
+    if(state.modalAction === 'DELETE_SCHOOL'){
+      const school = state.modal.data
+      dispatch( actions.setDataLoading(true) )
+    
+      fetch(process.env.REACT_APP_API_URL + 'escolas/' + school.id, {
+        headers: {
+          "Authorization": "Bearer " + localStorage.getItem('token'),
+          'Content-Type': 'application/json'
+        },
+        method: 'DELETE'
+      })
+      .then(res => {
+        if (res.ok){
+          setForceEffect( Math.random() )
+        }
+        if (res.status === 401) {  // Desloga o usuário caso o token seja inválido
+          hp.logout(dispatch, navigate)
+        }
+        else if(!res.ok) {        
+          console.log('Ocorreu um problema')
+        } 
+      })
+      .catch((err) => {
+        console.log(err)
+      })
+      .finally(() => {
+        dispatch( actions.setDataLoading(false) )
+        if(location.pathname !== '/escolas'){
+          navigate('/escolas')
+        }
+      })
+    }
+    // Limpa o estado para que as alterações possam ser identificadas novamente
+    dispatch( actions.setModalAction('') )
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.modalAction])
   
   useEffect(() => {
     if(initialRender.current){ // Não executa na primeira redenrização
@@ -104,6 +143,25 @@ export default function Schools(){
     })
   }
 
+  function details(school){
+    navigate('/escolas/' + school.id, { state: school })
+  }
+
+  function edit(e, school){
+    e.stopPropagation()
+    navigate('/escolas/' + school.id + '/edicao', { state: school })
+  }
+
+  function delete_(e, school){
+    e.stopPropagation()
+    dispatch( actions.setModal({ // Exibe a página modal
+      ...state.modal,
+      body: `Deseja realmente excluir a escola nº ${school.id}: ${school.nome} ?`,
+      data: school,
+      action: 'DELETE_SCHOOL'
+    }) )
+  }
+
   return (
     <div> {/* Ou renderiza o filtro e escolas ou o formulário de cadastro */}
       { location.pathname === '/escolas' ? <>
@@ -131,14 +189,25 @@ export default function Schools(){
             </div>
           </div>
 
-        <Loading>
+        <Loading> {/* Componente para exibir o gif de carregamento. É controlado pelo estado do redux "dataLoading" */}
           <div className="row">
             { state.schools.map(school =>        
-              <div className="col-12 col-sm-6 col-lg-4" 
-                  key={school.id} onClick={() => navigate('/escolas/' + school.id + '/edicao')} >
+              <div className="col-12 col-sm-6 col-lg-4 pointer" 
+                  key={school.id} onClick={() => details(school)} >
                 <div className="card mt-3">
                   <h5 className="card-header">
-                    <i className="bi bi-book"></i> {school.nome} 
+                    <div className="d-flex align-items-start justify-content-between">
+                      <div>
+                        <i className="bi bi-book"></i> {school.nome}
+                      </div>
+                      <div className="d-flex"> 
+                        <i className="bi bi-pencil text-info ms-3 ms-md-2"  
+                          onClick={(e) => edit(e, school)}></i>
+                        <i className="bi bi-trash text-danger ms-3 ms-md-2"
+                          onClick={(e) => delete_(e, school)}></i>
+                      </div>
+                    </div>
+                     
                   </h5>
                   <div className="card-body">
                     { school.diretor && 
@@ -151,19 +220,12 @@ export default function Schools(){
                     </p>
 
                     <p className="card-text">
-                      <i className="bi bi-map"></i> Localização: { hp.localizacao(school.localizacao) }
+                      <i className="bi bi-map"></i> Localização: { school.zona }
                     </p>
 
                   </div>
                   <div className="card-footer text-body-secondary">
-                    Turno(s): { school.turnos.map((turno, i) => {
-                      let t = hp.turno(turno.turno_sigla)
-                      let key = school.id + i
-                      if(i !== 0){ 
-                        return <span key={key}>, {t}</span>
-                      }
-                      else return <span key={key}>{t}</span>
-                    })}
+                    turno(s): { hp.turnos(school.turnos) }
                   </div>
                 </div>
               </div>

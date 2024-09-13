@@ -7,7 +7,14 @@ const initialState = {
   },
   schools: [],
   cities: [],
-  dataLoading: true
+  dataLoading: true,
+  modal: {
+    title: 'Confimação',
+    body: '',
+    data: '',
+    action: ''
+  },
+  modalAction: ''
 }
 
 const globalSlice = createSlice({
@@ -25,6 +32,12 @@ const globalSlice = createSlice({
     },
     setDataLoading: (state, action) => {
       state.dataLoading = action.payload
+    },
+    setModal: (state, action) => {
+      state.modal = action.payload
+    },
+    setModalAction: (state, action) => {
+      state.modalAction = action.payload
     }
   }
 })

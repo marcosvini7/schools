@@ -1,28 +1,25 @@
 import { actions } from "../store"
 
 export const hp = {
-  turno: (sigla) => {
-    switch(sigla){
-      case 'M': return 'Manhã'
-      case 'T': return 'Tarde'
-      case 'N': return 'Noite'
-      case 'I': return 'Integral'
-      default:
-    }
-  },
-
-  localizacao: (i) => {
-    switch(i){
-      case 1: return 'Urbana'
-      case 2: return 'Rural'
-      default:
-    }
-  },
-
   logout: (dispatch, navigate) => {
     localStorage.clear()
     dispatch( actions.setUser({}) )
     navigate('/login', { replace: true })
+  },
+
+  turnos: (turnos) => {
+    let text = ''
+    if(turnos){
+      turnos.forEach((t, i) => {
+        if(i === 0){
+          text = t.turno
+        } else {
+          text += ', ' + t.turno
+        }
+      })
+    }
+
+    return text
   }
 }
 

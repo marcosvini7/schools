@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { useNavigate, useParams } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { hp } from "../../../util/helpers"
 import { actions } from "../../../store"
 import Loading from "../../../components/Loading"
@@ -22,9 +22,19 @@ export default function SchoolsNew(){
   const state = useSelector(state => state.global)
   const dispatch = useDispatch()
   const { id } = useParams()
+  const location = useLocation()
 
   useEffect(() => {
-    if(id){ // Se for a rota de edição
+    if(location.state){ // Se o estado for passado não precisa fazer a requisição para buscar os dados
+      setForm({
+        nome: location.state.nome,
+        diretor: location.state.diretor,
+        cidade_id: location.state.cidade_id,
+        localizacao: location.state.localizacao,
+        turnos: location.state.turnos.map(turno => turno.turno_sigla)
+      })
+    }
+    else if(id){ // Se for a rota de edição
       dispatch( actions.setDataLoading(true) )
       fetch(process.env.REACT_APP_API_URL + 'escolas/' + id, {
         headers: {

@@ -11,7 +11,7 @@ export default function NotFound(){
       <div className="container-fluid">
         <h3>Ops! infelizmente não conseguimos encontrar essa página :(</h3>
         <h4>Clique <span className="text-info pointer" 
-          onClick={() => navigate('/login', {replace: true})} >aqui</span> para voltar </h4>
+          onClick={() => navigate(-1, {replace: true})} >aqui</span> para voltar </h4>
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { actions } from './store'
+import Modal from './components/Modal';
 
 function App() {
   const location = useLocation()
@@ -23,13 +24,22 @@ function App() {
   useEffect(() => { 
     let title = 'Schools'
     switch(location.pathname){ 
-      case '/login': title += ' - login'; break
-      case '/sobre': title += ' - sobre'; break
-      case '/escolas': title += ' - escolas'; break
-      case '/escolas/cadastro': title += ' - cadastro de escola'; break
+      case '/login': title += ' - Login'; break
+      case '/sobre': title += ' - Sobre'; break
+      case '/escolas': title += ' - Escolas'; break
+      case '/escolas/cadastro': title += ' - Cadastro de Escola'; break
       default:
     }
-    document.getElementsByTagName('title')[0].innerText = title
+
+    if(title === 'Schools'){
+      if(location.pathname.includes('escolas') && location.pathname.includes('edicao')){
+        title += ' - Edição de Escola'
+      } else {
+        title += ' - Detalhes'
+      }
+    }  
+
+    document.title = title
 
     if(location.pathname === '/'){
       navigate('/login')
@@ -40,6 +50,7 @@ function App() {
 
   return (
     <div>
+      <Modal />
       <Navbar/>
       <div className='container-fluid mt-3 mb-3'>
         <Outlet />        
