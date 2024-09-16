@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { hp } from "../../../util/helpers"
-import { actions } from "../../../store"
 import Loading from "../../../components/Loading"
+import { sc } from "../../../services"
+import { actions } from "../../../store"
 
 export default function SchoolsNew(){
   const initialForm = {
@@ -18,51 +18,24 @@ export default function SchoolsNew(){
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [btnDisabled, setBtnDisabled] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
   const state = useSelector(state => state.global)
   const dispatch = useDispatch()
   const { id } = useParams()
   const location = useLocation()
 
   useEffect(() => {
-    if(location.state){ // Se o estado for passado não precisa fazer a requisição para buscar os dados
+    dispatch( actions.setSomeChange(false) )
+    if(location.state){ // Se o estado for enviado da outra rota não precisa fazer a requisição para buscar os dados
       setForm({
         nome: location.state.nome,
-        diretor: location.state.diretor,
+        diretor: location.state.diretor ? location.state.diretor : '',
         cidade_id: location.state.cidade_id,
         localizacao: location.state.localizacao,
         turnos: location.state.turnos.map(turno => turno.turno_sigla)
       })
     }
-    else if(id){ // Se for a rota de edição
-      dispatch( actions.setDataLoading(true) )
-      fetch(process.env.REACT_APP_API_URL + 'escolas/' + id, {
-        headers: {
-          "Authorization": "Bearer " + localStorage.getItem('token')
-        }})
-        .then(res => {
-          if(res.ok){
-            return res.json()
-          }
-          if(res.status === 401){ // Desloga o usuário caso o token seja inválido
-            hp.logout(dispatch, navigate)
-          }
-        })
-        .then(data => {
-          setForm({
-            nome: data.nome,
-            diretor: data.diretor,
-            cidade_id: data.cidade_id,
-            localizacao: data.localizacao,
-            turnos: data.turnos.map(turno => turno.turno_sigla)
-          })
-        })
-        .catch(err => {
-          console.log(err)
-        })
-        .finally(() => {
-          dispatch( actions.setDataLoading(false) )
-        })
+    else if(id){ 
+      sc.getData({dispatch, navigate, url: 'escolas/' + id, set: setForm})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -100,125 +73,110 @@ export default function SchoolsNew(){
     }
   }
 
-  function handleSubmitForm(){
-    setBtnDisabled(true)
-    setIsLoading(true)
-    setErrorMessage('')
-    setSuccessMessage('')
-    document.body.style.cursor = 'wait'
+  function handleSubmitForm(e){
+    e.preventDefault()
 
-    let url = 'escolas'
     let msgSuccess = 'Escola cadastrada com sucesso!'
     let msgError = 'Erro ao cadastrar escola'
     if(id){
-      url = 'escolas/' + id 
       msgSuccess = 'Escola atualizada com sucesso!'
       msgError = 'Erro ao atualizar escola'
     }
+    setSuccessMessage('')
+    setErrorMessage('')
 
-    fetch(process.env.REACT_APP_API_URL + url, {
-      headers: {
-        "Authorization": "Bearer " + localStorage.getItem('token'),
-        'Content-Type': 'application/json'
+    sc.setData({
+      dispatch, 
+      navigate, 
+      url: id ? 'escolas/' + id : 'escolas',
+      method: id ? 'PATCH' : 'POST',
+      successAction: () => {
+        if(!id) setForm(initialForm)
       },
-      method: id ? 'PATCH' : 'POST', // Se tiver o id, significa que o objetivo é uma edição, caso contrário, cadastro
-      body: JSON.stringify(form)
-    })
-    .then(res => {
-      if (res.ok){
-        if(!id){
-          setForm(initialForm)
-        }     
-        setSuccessMessage(msgSuccess)
-      }
-      if (res.status === 401) {  // Desloga o usuário caso o token seja inválido
-        hp.logout(dispatch, navigate)
-      }
-      else if(!res.ok) {        
-        setErrorMessage(msgError)
-      } 
-    })
-    .catch((err) => {
-      console.log(err)
-    })
-    .finally(() => {
-      setBtnDisabled(false)
-      setIsLoading(false)
-      document.body.style.cursor = 'default'
+      body: form,
+      showSuccessMessage: () => setSuccessMessage(msgSuccess),
+      showErrorMessage: () => setErrorMessage(msgError),
+      setBtnDisabled
     })
   }
+
+  const updatePage = useMemo(() => state.someChange ? 'update' : '', [state.someChange])
 
   return (
     <div>     
       <h5 className="text-center">
         <i className="bi bi-arrow-left pointer text-info mx-2" 
-          onClick={() => navigate('/escolas', {state: 'update'})}></i>
+          onClick={() => navigate('/escolas', {state: updatePage})}></i>
         {id ? 'Edição de escola nº ' + id : 'Cadastro de escola'}
       </h5>
 
-      <Loading>
-      <div className="mb-3"> 
-        <label htmlFor="input-name" className="form-label">Nome da escola</label>
-        <input type="text" name="nome" className="form-control" id="input-name" 
-          onChange={handleChangeInput} value={form.nome} />
-      </div>
-
-      <div className="mb-3"> 
-        <label htmlFor="input-director" className="form-label">Diretor</label>
-        <small className="form-text"> (opcional) </small>
-        <input type="text" name="diretor" className="form-control" id="input-director" 
-          onChange={handleChangeInput} value={form.diretor} />
-      </div>
-
-      <div className="mb-3">
-        <select className="form-select" name="cidade_id" onChange={handleChangeInput} value={form.cidade_id}>
-          <option disabled value="">-- Cidade --</option>
-          { state.cities.map(city => 
-            <option value={city.id} key={city.id} > {city.descricao} </option>  
-          )}
-        </select>
-      </div>
-
-      <div className="mb-3">
-        <select className="form-select" name="localizacao" onChange={handleChangeInput} value={form.localizacao}>
-          <option disabled value="">-- Localização --</option>
-          <option value="1">Urbana</option>
-          <option value="2">Rural</option>
-        </select>
-      </div>
-
-      <div className="mb-3" >
-        <div className="mb-2">Turnos</div>
-        <div className="btn-group" role="group" aria-label="Basic checkbox toggle button group">
-          <input type="checkbox" name="turnos" checked={form.turnos.includes('M')} value="M" 
-            className="btn-check" id="btncheck1" autoComplete="off" onChange={handleChangeInput}/>
-          <label className="btn btn-outline-primary" htmlFor="btncheck1">Manhã</label>
-
-          <input type="checkbox" name="turnos" checked={form.turnos.includes('T')} value="T" 
-            className="btn-check" id="btncheck2" autoComplete="off" onChange={handleChangeInput}/>
-          <label className="btn btn-outline-primary" htmlFor="btncheck2">Tarde</label>
-
-          <input type="checkbox" name="turnos" checked={form.turnos.includes('N')} value="N" 
-            className="btn-check" id="btncheck3" autoComplete="off" onChange={handleChangeInput}/>
-          <label className="btn btn-outline-primary" htmlFor="btncheck3">Noite</label>
-
-          <input type="checkbox" name="turnos" checked={form.turnos.includes('I')} value="I" 
-            className="btn-check" id="btncheck4" autoComplete="off" onChange={handleChangeInput}/>
-          <label className="btn btn-outline-primary" htmlFor="btncheck4">Integral</label>
+      <Loading> 
+      <form onSubmit={handleSubmitForm}>
+        <div className="mb-3"> 
+          <label htmlFor="input-name" className="form-label">Nome da escola</label>
+          <input type="text" name="nome" className="form-control" id="input-name" 
+            onChange={handleChangeInput} value={form.nome} minLength="6" maxLength="200"/>
         </div>
-      </div>
-    
-      <button className="btn btn-primary" disabled={btnDisabled} onClick={handleSubmitForm}>
-        <i className="bi bi-floppy2-fill"></i> Cadastrar
-      </button>
-      { isLoading && <img src="/images/1488.gif" className="btn-gif" alt="" /> }
 
-      { errorMessage && 
-        <div className="text-danger text-center text-md-start mt-2">{ errorMessage }</div>
-      }
-      { successMessage &&
-        <div className="text-success text-center text-md-start mt-2">{ successMessage }</div>
-      }
+        <div className="mb-3"> 
+          <label htmlFor="input-director" className="form-label">Diretor</label>
+          <small className="form-text"> (opcional) </small>
+          <input type="text" name="diretor" className="form-control" id="input-director" 
+            onChange={handleChangeInput} value={form.diretor} minLength="6" maxLength="200" />
+        </div>
+
+        <div className="mb-3">
+          <select className="form-select" name="cidade_id" onChange={handleChangeInput} value={form.cidade_id} >
+            <option disabled value="">-- Cidade --</option>
+            { state.cities.map(city => 
+              <option value={city.id} key={city.id} > {city.descricao} </option>  
+            )}
+          </select>
+        </div>
+
+        <div className="mb-3">
+          <select className="form-select" name="localizacao" onChange={handleChangeInput} value={form.localizacao} >
+            <option disabled value="">-- Localização --</option>
+            <option value="1">Urbana</option>
+            <option value="2">Rural</option>
+          </select>
+        </div>
+
+        <div className="mb-3" >
+          <div className="mb-2">Turnos</div>
+          <div className="btn-group" role="group" aria-label="Basic checkbox toggle button group">
+            <input type="checkbox" name="turnos" checked={form.turnos.includes('M')} value="M" 
+              className="btn-check" id="btncheck1" autoComplete="off" onChange={handleChangeInput}/>
+            <label className="btn btn-outline-primary" htmlFor="btncheck1">Manhã</label>
+
+            <input type="checkbox" name="turnos" checked={form.turnos.includes('T')} value="T" 
+              className="btn-check" id="btncheck2" autoComplete="off" onChange={handleChangeInput}/>
+            <label className="btn btn-outline-primary" htmlFor="btncheck2">Tarde</label>
+
+            <input type="checkbox" name="turnos" checked={form.turnos.includes('N')} value="N" 
+              className="btn-check" id="btncheck3" autoComplete="off" onChange={handleChangeInput}/>
+            <label className="btn btn-outline-primary" htmlFor="btncheck3">Noite</label>
+
+            <input type="checkbox" name="turnos" checked={form.turnos.includes('I')} value="I" 
+              className="btn-check" id="btncheck4" autoComplete="off" onChange={handleChangeInput}/>
+            <label className="btn btn-outline-primary" htmlFor="btncheck4">Integral</label>
+          </div>
+        </div>
+      
+        <button type="submit" className="btn btn-primary" disabled={btnDisabled}>
+          <i className="bi bi-floppy2-fill"></i> 
+          { id ? ' Atualizar' : ' Cadastrar'}
+        </button>
+   
+        { state.btnLoading && <img src="/images/1488.gif" className="btn-gif" alt="" /> }
+
+        { errorMessage && 
+          <div className="text-danger text-center text-md-start mt-2">{ errorMessage }</div>
+        }
+        { successMessage &&
+          <div className="text-success text-center text-md-start mt-2">{ successMessage }</div>
+        }
+      </form>
       </Loading>
     </div>
   )

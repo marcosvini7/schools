@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { actions } from "../../store";
 import './styles.css'
 import { hp } from "../../util/helpers";
 import Loading from "../../components/Loading";
+import { sc } from "../../services";
 
 export default function Schools(){
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
   const state = useSelector(state => state.global)
-  let initialRender = useRef(true)
+  let renders = useRef(0)
   const initialForm = {
     nome: '',
     cidade_id: ''
@@ -19,94 +20,33 @@ export default function Schools(){
   const [form, setForm] = useState(initialForm)
   const [search, setSearch] = useState(initialForm)
   const [forceEffect, setForceEffect] = useState(0)
+  const [showElement, setShowElement] = useState(false)
+  const [searchParams] = useSearchParams()
 
   // Solicita as cidades para a api e salva os dados no redux
   useEffect(() => {
-    fetch(process.env.REACT_APP_API_URL + 'cidades', {
-      headers: {
-        "Authorization": "Bearer " + localStorage.getItem('token')
-      }})
-      .then(res => {
-        if(res.ok){
-          return res.json()
-        }
-        if(res.status === 401){ // Desloga o usuário caso o token seja inválido
-          hp.logout(dispatch, navigate)
-        }
-      })
-      .then(data => {
-        dispatch( actions.setCities(data) )
-      })
-      .catch(err => {
-        console.log(err)
-      })
+    sc.getData({dispatch, navigate, url: 'cidades', action: 'setCities'})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Solicita as escolas para a api usando a lógica de parametros de query
+  // Navega para a própria página para mudar os parâmetros de query e ativar o useEffect da requisição
   useEffect(() => {
-    let url = process.env.REACT_APP_API_URL + 'escolas?nome=' + search.nome 
-      + '&cidade_id=' + search.cidade_id 
+    const url = '/escolas?page=' + 1 + '&nome=' + search.nome + '&cidade_id=' + search.cidade_id
 
-    dispatch( actions.setDataLoading(true) )
-    fetch(url, {
-      headers: {
-        "Authorization": "Bearer " + localStorage.getItem('token')
-      }
-    })
-    .then(res => {
-      if(res.ok){
-        return res.json()
-      }
-      if(res.status === 401){ // Desloga o usuário caso o token seja inválido
-        hp.logout(dispatch, navigate)
-      }
-    })
-    .then(res => {
-      dispatch( actions.setSchools(res.data) )
-    })
-    .catch(err => {
-      console.log(err)
-    })
-    .finally(() => {
-      dispatch( actions.setDataLoading(false) )
-    })
+    if(renders.current > 1){
+      navigate(url)
+    } else if(process.env.NODE_ENV !== 'development' && renders.current > 0) {
+      navigate(url)
+    }
+    
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, forceEffect])
 
   // É executado quando ocorre uma modificação em "state.modalDataAction", isso é feito somente na página modal
   useEffect(() => {
     if(state.modalAction === 'DELETE_SCHOOL'){
-      const school = state.modal.data
-      dispatch( actions.setDataLoading(true) )
-    
-      fetch(process.env.REACT_APP_API_URL + 'escolas/' + school.id, {
-        headers: {
-          "Authorization": "Bearer " + localStorage.getItem('token'),
-          'Content-Type': 'application/json'
-        },
-        method: 'DELETE'
-      })
-      .then(res => {
-        if (res.ok){
-          setForceEffect( Math.random() )
-        }
-        if (res.status === 401) {  // Desloga o usuário caso o token seja inválido
-          hp.logout(dispatch, navigate)
-        }
-        else if(!res.ok) {        
-          console.log('Ocorreu um problema')
-        } 
-      })
-      .catch((err) => {
-        console.log(err)
-      })
-      .finally(() => {
-        dispatch( actions.setDataLoading(false) )
-        if(location.pathname !== '/escolas'){
-          navigate('/escolas')
-        }
-      })
+      sc.setData({dispatch, navigate, url: 'escolas/' + state.modal.data.id, method: 'DELETE',
+        successAction: () => setForceEffect(Math.random())})
     }
     // Limpa o estado para que as alterações possam ser identificadas novamente
     dispatch( actions.setModalAction('') )
@@ -114,8 +54,7 @@ export default function Schools(){
   }, [state.modalAction])
   
   useEffect(() => {
-    if(initialRender.current){ // Não executa na primeira redenrização
-      initialRender.current = false
+    if(renders.current === 0){ // Não executa na primeira redenrização
       return
     }
 
@@ -129,14 +68,39 @@ export default function Schools(){
 
   }, [form])
 
+  // Executa quando os paramêtros de query mudam e faz a requisição para a api
+  useEffect(() => {
+    let page = searchParams.get('page') ? searchParams.get('page') : ''
+    const nome = searchParams.get('nome') ? searchParams.get('nome') : ''
+    const cidade_id = searchParams.get('cidade_id') ? searchParams.get('cidade_id') : ''
+    const url = 'escolas?page=' + page +  '&nome=' + nome + '&cidade_id=' + cidade_id
+    
+    sc.getData({dispatch, navigate, url, action: 'setSchools'})    
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   // Quando volta para a rota, atualiza os dados
   useEffect(() => {
-    if(location.state === 'update'){
+    if(location.state === 'update' && renders.current !== 0){
       setForceEffect(Math.random())
     }
   }, [location.state])
 
-  function handleInputChange(e){
+  // Deley para exibir o texto de "escolas não encontradas"
+  useEffect(() => {
+    renders.current += 1
+    if(location.pathname === '/escolas'){
+      if(!state.dataLoading){ // Se a requisição terminou
+        const timer = setTimeout(() => setShowElement(true), 100)
+        return () => clearTimeout(timer)
+      } else {
+        setShowElement(false)
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.dataLoading])
+
+  function handleChangeInput(e){
     setForm({
       ...form,
       [e.target.name]: e.target.value
@@ -162,18 +126,47 @@ export default function Schools(){
     }) )
   }
 
+  function navigateTo(p){
+    let prev = p.label.includes('Previous')
+    let next = p.label.includes('Next')
+    if((state.linkDisabled.prev && prev) || (state.linkDisabled.next && next)){
+      return
+    }
+
+    let url = '/escolas?page='
+    let page =  searchParams.get('page') ? parseInt(searchParams.get('page')) : parseInt(p.label)
+
+    if(!page){
+      page = 1
+    }
+    if(prev){
+      url += page - 1
+    }
+    else if(next){
+      url += page + 1
+    } else {
+      url += p.label
+    }
+
+    const nome = searchParams.get('nome') ? searchParams.get('nome') : ''
+    const cidade_id = searchParams.get('cidade_id') ? searchParams.get('cidade_id') : ''
+    url += '&nome=' + nome + '&cidade_id=' + cidade_id
+
+    navigate(url)
+  }
+
   return (
-    <div> {/* Ou renderiza o filtro e escolas ou o formulário de cadastro */}
+    <div> {/* Ou renderiza o filtro e escolas ou o conteúdo de outra página*/}
       { location.pathname === '/escolas' ? <>
           <div>
             <div className="row">
               <div className="col-12 col-md-9">
                 <input type="search" value={form.nome} placeholder="Pesquise por escolas" className="form-control" name="nome" 
-                  onChange={handleInputChange} />
+                  onChange={handleChangeInput} />
               </div>
 
               <div className="col-10 col-md-2 mt-2 mt-md-0">
-                <select className="form-select" value={form.cidade_id} name="cidade_id" onChange={handleInputChange} >
+                <select className="form-select" value={form.cidade_id} name="cidade_id" onChange={handleChangeInput} >
                   <option value="">-- Cidade --</option>
                   { state.cities.map(city => 
                     <option value={city.id} key={city.id} > {city.descricao} </option>  
@@ -231,13 +224,49 @@ export default function Schools(){
               </div>
             )} 
           </div>
-        </Loading>
 
-      { !state.dataLoading && !state.schools.length && // Se não está carregando e não tem dados no array
-        <h5 className="text-center mt-5">Ops! não foram encontradas escolas</h5>
-      }
+          { state.schools.length > 0 &&
+          <div className="mt-4 mb-3">
+            <div className="text-center mb-1"> 
+              <small>{ state.pageData.from } - { state.pageData.to } </small>
+            </div>
+            <div className="d-flex justify-content-center">            
+              <nav aria-label="Page navigation example">
+                <ul className="pagination">               
+                  { state.pageData.links?.map((p, i) => 
+                    <span key={ 'link-paginate-' + i } onClick={ () => navigateTo(p) } >
+                      { p.label.includes('Previous') &&                 
+                          <li className="page-item pointer">
+                            <span className={state.linkDisabled.prev ? 'page-link disabled' : 'page-link'}>
+                              <i className="bi bi-arrow-left"></i></span>                  
+                          </li>
+                      }
+                      { p.label.includes('Next') &&                   
+                          <li className="page-item pointer">
+                            <span className={state.linkDisabled.next ? 'page-link disabled' : 'page-link'}>
+                              <i className="bi bi-arrow-right"></i></span>
+                          </li>
+                      }
+                      { !p.label.includes('Next') && !p.label.includes('Previous') &&                     
+                          <li className={ p.active ? 'page-item active pointer' : 'page-item pointer' }>
+                            <span className="page-link"> { p.label } </span>
+                          </li>                  
+                      }        
+                    </span> 
+                  )}
+                </ul>
+              </nav>
+            </div>
+          </div>
+          }
+
+          { !state.schools.length && showElement &&
+            <h5 className="text-center mt-5">Ops! não foram encontradas escolas</h5>
+          }
+        </Loading>
+        
       </>
-      : // Exibe a página de cadastro
+      : // Exibe outra página
         <Outlet/>
       }
   </div>

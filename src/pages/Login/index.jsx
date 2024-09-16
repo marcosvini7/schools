@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
-import { actions } from "../../store"
+import { sc } from "../../services"
 
 export default function Login(){
   const navigate = useNavigate()
@@ -9,7 +9,7 @@ export default function Login(){
   const [form, setForm] = useState({})
   const [errorMessage, setErrorMessage] = useState('')
   const [btnDisabled, setBtnDisabled] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
+  const state = useSelector(state => state.global)
 
   useEffect(() => {
     if(form.email && form.senha){
@@ -26,39 +26,14 @@ export default function Login(){
     })
   }
 
-  function handleSubmitForm(){
-    setBtnDisabled(true)
-    setIsLoading(true)
+  function handleSubmitForm(e){
+    e.preventDefault()
     setErrorMessage('')
-    document.body.style.cursor = 'wait'
-
-    fetch(process.env.REACT_APP_API_URL + 'login/run', {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      method: 'POST',
-      body: JSON.stringify(form)
-    })
-    .then(res => res.json())
-    .then(data => {
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('name', data.nome) 
-      dispatch( actions.setUser({
-        name: data.nome,
-        token: data.token
-      }))
-      
-      navigate('/escolas')  
-    })
-    .catch((err) => {
-      console.log(err)
-      setErrorMessage('E-mail ou senha incorreto(s)')
-    })
-    .finally(() => {
-      setBtnDisabled(false)
-      setIsLoading(false)
-      document.body.style.cursor = 'default'
-    })
+    
+    sc.setData({
+      dispatch, navigate, url: 'login/run', method: 'POST', 
+      body: form, setBtnDisabled, login: true, navigateTo: '/escolas', 
+      showErrorMessage: () => setErrorMessage('E-mail ou senha incorreto(s)')})
   }
 
   return (
@@ -66,28 +41,28 @@ export default function Login(){
       <div className="card col-12 col-sm-8 col-md-6 col-lg-4">
         <div className="card-body">
           <h5 className="card-title text-center">Login</h5>
+          <form onSubmit={handleSubmitForm}>
+            <div className="mb-3"> 
+              <label htmlFor="input-email" className="form-label">E-mail</label>
+              <input type="email" name="email" className="form-control" id="input-email" 
+                onChange={handleChangeInput} />
+            </div>
 
-          <div className="mb-3"> 
-            <label htmlFor="input-email" className="form-label">E-mail</label>
-            <input type="email" name="email" className="form-control" id="input-email" 
-              onChange={handleChangeInput} />
-          </div>
+            <div className="mb-3"> 
+              <label htmlFor="input-password" className="form-label">Senha</label>
+              <input type="password" name="senha" className="form-control" id="input-password" 
+                onChange={handleChangeInput} />
+            </div>
+            
+            <button type="submit" className="btn btn-primary" disabled={btnDisabled}>
+              <i className="bi bi-box-arrow-right"></i> Acessar
+            </button>
+            { state.btnLoading && <img src="/images/1488.gif" className="btn-gif" alt="" /> }
 
-          <div className="mb-3"> 
-            <label htmlFor="input-password" className="form-label">Senha</label>
-            <input type="password" name="senha" className="form-control" id="input-password" 
-              onChange={handleChangeInput} />
-          </div>
-          
-          <button className="btn btn-primary" disabled={btnDisabled} onClick={handleSubmitForm} >
-            <i className="bi bi-box-arrow-right"></i> Acessar
-          </button>
-          { isLoading && <img src="/images/1488.gif" className="btn-gif" alt="" /> }
-
-          { errorMessage && 
-            <div className="text-center text-danger mt-2">{ errorMessage }</div>
-          }
-          
+            { errorMessage && 
+              <div className="text-center text-danger mt-2">{ errorMessage }</div>
+            }
+          </form>
         </div>
       </div>
     </div>

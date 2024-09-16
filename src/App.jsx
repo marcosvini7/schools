@@ -41,8 +41,12 @@ function App() {
 
     document.title = title
 
-    if(location.pathname === '/'){
-      navigate('/login')
+    // Se o usuário estiver logado, o mesmo não pode acessar a rota de login
+    if(location.pathname === '/login' && localStorage.getItem('name')){
+      navigate('/escolas', { replace: true })
+    }
+    else if(location.pathname === '/') { 
+      navigate('/login', { replace: true })
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps

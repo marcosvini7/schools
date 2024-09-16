@@ -7,14 +7,18 @@ const initialState = {
   },
   schools: [],
   cities: [],
-  dataLoading: true,
+  dataLoading: false,
+  btnLoading: false,
   modal: {
     title: 'Confimação',
     body: '',
     data: '',
     action: ''
   },
-  modalAction: ''
+  modalAction: '',
+  someChange: false,
+  pageData: {},
+  linkDisabled: {}
 }
 
 const globalSlice = createSlice({
@@ -33,11 +37,23 @@ const globalSlice = createSlice({
     setDataLoading: (state, action) => {
       state.dataLoading = action.payload
     },
+    setBtnLoading: (state, action) => {
+      state.btnLoading = action.payload
+    },
     setModal: (state, action) => {
       state.modal = action.payload
     },
     setModalAction: (state, action) => {
       state.modalAction = action.payload
+    },
+    setSomeChange: (state, action) => {
+      state.someChange = action.payload
+    },
+    setPageData: (state, action) => {
+      state.pageData = action.payload
+    },
+    setLinkDisabled: (state, action) => {
+      state.linkDisabled = action.payload
     }
   }
 })
