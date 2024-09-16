@@ -13,36 +13,70 @@ export default function Schools(){
   const location = useLocation()
   const state = useSelector(state => state.global)
   let renders = useRef(0)
+  const [searchParams] = useSearchParams()
   const initialForm = {
     nome: '',
     cidade_id: ''
   }
-  const [form, setForm] = useState(initialForm)
+  const [form, setForm] = useState({
+    nome: searchParams.get('nome') ? searchParams.get('nome') : '',
+    cidade_id: searchParams.get('cidade_id') ? searchParams.get('cidade_id') : ''
+  })
   const [search, setSearch] = useState(initialForm)
   const [forceEffect, setForceEffect] = useState(0)
   const [showElement, setShowElement] = useState(false)
-  const [searchParams] = useSearchParams()
+  let browserNav = useRef(false)
 
   // Solicita as cidades para a api e salva os dados no redux
   useEffect(() => {
     sc.getData({dispatch, navigate, url: 'cidades', action: 'setCities'})
+
+    // Se o usuário clicou em um botão de navegação do browser, identifica essa ação através do browserNav
+    const handlePopState = () => {
+      browserNav.current = true
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Navega para a própria página para mudar os parâmetros de query e ativar o useEffect da requisição
   useEffect(() => { 
-    const url = '/escolas?page=1&nome=' + search.nome + '&cidade_id=' + search.cidade_id
+    let nome = search.nome
+    let cidade_id = search.cidade_id
+    let page =  1
+    if(browserNav.current){ // Se navegou através da navegação do browser, usa os parâmetros para fazer a requisição
+      nome = searchParams.get('nome') ? searchParams.get('nome') : ''
+      cidade_id = searchParams.get('cidade_id') ? searchParams.get('cidade_id') : ''
+      page = searchParams.get('page') ? searchParams.get('page') : ''
+    }
+    const url = 'escolas?page=' + page + '&nome=' + nome + '&cidade_id=' + cidade_id
 
+    function executeAction(){
+      if(browserNav.current){
+        browserNav.current = false
+        sc.getData({dispatch, navigate, url, action: 'setSchools'})
+      } else {
+        // Navega para a própria página para mudar os parâmetros de query e ativar o useEffect da requisição
+        // Assim, fica um histórico de pesquisa no navegador
+        if(location.pathname === '/escolas'){
+          navigate('/' + url)
+        }        
+      }  
+    }
+
+    // Evita execução ao iniciar o componente
     if(renders.current > 1){
-      navigate(url)
+      executeAction()    
     } else if(process.env.NODE_ENV !== 'development' && renders.current > 0) {
-      navigate(url)
+      executeAction()
     }
     
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, forceEffect])
 
-  // É executado quando ocorre uma modificação em "state.modalDataAction", isso é feito somente na página modal
+  // É executado quando ocorre uma modificação em "state.modalDataAction", isso é feito na página modal
   useEffect(() => {
     if(state.modalAction === 'DELETE_SCHOOL'){
       sc.setData({dispatch, navigate, url: 'escolas/' + state.modal.data.id, method: 'DELETE',
@@ -53,11 +87,11 @@ export default function Schools(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.modalAction])
   
+  // Modifica o "search" que causa a execução de outro useEffect
   useEffect(() => {
     if(renders.current === 0){ // Não executa na primeira redenrização
       return
     }
-
     // Lógica para fazer a requisição somente depois de um tempo que o usuário digitar,
     // para evitar que uma requisição seja feita a cada caractere digitado
     const timeout = setTimeout(() => {     
@@ -70,14 +104,34 @@ export default function Schools(){
 
   // Executa quando os paramêtros de query mudam e faz a requisição para a api
   useEffect(() => {
-    if(location.pathname === '/escolas'  || (location.pathname !== '/escolas' && renders.current === 0)){
-      let page = searchParams.get('page') ? searchParams.get('page') : ''
+    let timer
+    if(location.pathname === '/escolas' &&  renders.current !== 0){
       const nome = searchParams.get('nome') ? searchParams.get('nome') : ''
       const cidade_id = searchParams.get('cidade_id') ? searchParams.get('cidade_id') : ''
+      const page = searchParams.get('page') ? searchParams.get('page') : ''       
       const url = 'escolas?page=' + page +  '&nome=' + nome + '&cidade_id=' + cidade_id
+
+      timer = setTimeout(() => { // Timer para garantir a execução depois da função listener de click na navegação do browser           
+        if(!browserNav.current){ // Se não navegou com os botões do browser           
+          if(location.search){  // Se tem parâmetros de query
+            sc.getData({dispatch, navigate, url, action: 'setSchools'}) 
+          } else {            
+            setForm(initialForm) // Reseta o form               
+          }
+        } 
+        else {              
+          // Modifica o form com os parâmetros query e implica execução de outro useEffect
+          setForm({nome, cidade_id})                  
+        }              
+      }, 10)
+    }
+
+    if(renders.current === 0){ // Executa ao iniciar o componente
+      sc.getData({dispatch, navigate, url: 'escolas', action: 'setSchools'})
+    }
       
-      sc.getData({dispatch, navigate, url, action: 'setSchools'})   
-    } 
+    return () => clearTimeout(timer)
+    
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -91,14 +145,16 @@ export default function Schools(){
   // Deley para exibir o texto de "escolas não encontradas"
   useEffect(() => {
     renders.current += 1
+    let timer
     if(location.pathname === '/escolas'){
       if(!state.dataLoading){ // Se a requisição terminou
-        const timer = setTimeout(() => setShowElement(true), 100)
-        return () => clearTimeout(timer)
+        timer = setTimeout(() => setShowElement(true), 200)
+        
       } else {
         setShowElement(false)
       }
     }
+    return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.dataLoading])
 

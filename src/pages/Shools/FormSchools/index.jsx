@@ -25,17 +25,20 @@ export default function SchoolsNew(){
 
   useEffect(() => {
     dispatch( actions.setSomeChange(false) )
-    if(location.state){ // Se o estado for enviado da outra rota não precisa fazer a requisição para buscar os dados
+    function setForm_(p){
       setForm({
-        nome: location.state.nome,
-        diretor: location.state.diretor ? location.state.diretor : '',
-        cidade_id: location.state.cidade_id,
-        localizacao: location.state.localizacao,
-        turnos: location.state.turnos.map(turno => turno.turno_sigla)
+        nome: p.nome,
+        diretor: p.diretor ? p.diretor : '',
+        cidade_id: p.cidade_id,
+        localizacao: p.localizacao,
+        turnos: p.turnos.map(turno => turno.turno_sigla)
       })
     }
+    if(location.state){ // Se o estado for enviado da outra rota não precisa fazer a requisição para buscar os dados
+      setForm_(location.state)
+    }
     else if(id){ 
-      sc.getData({dispatch, navigate, url: 'escolas/' + id, set: setForm})
+      sc.getData({dispatch, navigate, url: 'escolas/' + id, set: setForm_})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -143,7 +146,7 @@ export default function SchoolsNew(){
         </div>
 
         <div className="mb-3" >
-          <div className="mb-2">Turnos</div>
+          <div className="mb-2">Turnos</div> 
           <div className="btn-group" role="group" aria-label="Basic checkbox toggle button group">
             <input type="checkbox" name="turnos" checked={form.turnos.includes('M')} value="M" 
               className="btn-check" id="btncheck1" autoComplete="off" onChange={handleChangeInput}/>
