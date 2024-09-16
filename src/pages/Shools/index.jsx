@@ -30,8 +30,8 @@ export default function Schools(){
   }, [])
 
   // Navega para a própria página para mudar os parâmetros de query e ativar o useEffect da requisição
-  useEffect(() => {
-    const url = '/escolas?page=' + 1 + '&nome=' + search.nome + '&cidade_id=' + search.cidade_id
+  useEffect(() => { 
+    const url = '/escolas?page=1&nome=' + search.nome + '&cidade_id=' + search.cidade_id
 
     if(renders.current > 1){
       navigate(url)
@@ -70,12 +70,14 @@ export default function Schools(){
 
   // Executa quando os paramêtros de query mudam e faz a requisição para a api
   useEffect(() => {
-    let page = searchParams.get('page') ? searchParams.get('page') : ''
-    const nome = searchParams.get('nome') ? searchParams.get('nome') : ''
-    const cidade_id = searchParams.get('cidade_id') ? searchParams.get('cidade_id') : ''
-    const url = 'escolas?page=' + page +  '&nome=' + nome + '&cidade_id=' + cidade_id
-    
-    sc.getData({dispatch, navigate, url, action: 'setSchools'})    
+    if(location.pathname === '/escolas'  || (location.pathname !== '/escolas' && renders.current === 0)){
+      let page = searchParams.get('page') ? searchParams.get('page') : ''
+      const nome = searchParams.get('nome') ? searchParams.get('nome') : ''
+      const cidade_id = searchParams.get('cidade_id') ? searchParams.get('cidade_id') : ''
+      const url = 'escolas?page=' + page +  '&nome=' + nome + '&cidade_id=' + cidade_id
+      
+      sc.getData({dispatch, navigate, url, action: 'setSchools'})   
+    } 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 

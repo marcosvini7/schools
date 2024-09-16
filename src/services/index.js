@@ -24,7 +24,7 @@ export const sc = {
       const data = res.data ? res.data : res
       // Se "set" for válido, então se trata de uma modificação de estado local, caso contrário, usa o redux
       if(set){ 
-        set() 
+        set(data) 
       } else {
         dispatch( actions[action](data) )
       } 
