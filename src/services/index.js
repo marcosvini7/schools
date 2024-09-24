@@ -69,7 +69,7 @@ export const sc = {
     })
     .then(res => {
       if (res.ok){
-        // Indica que ocorreu uma mudança de dados, assim a requisição na página de busca deve ser feita
+        // Indica que ocorreu uma mudança de dados,assim a requisição na página de busca deve ser feita
         dispatch( actions.setSomeChange(true) ) 
         return res.json()                
       }
